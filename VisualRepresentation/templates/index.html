@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!--
+
+Template 2094 Mason
+
+http://www.tooplate.com/view/2094-mason
+
+-->
+    <!-- load stylesheets -->
+
+    <link rel="stylesheet" href="static/font-awesome-4.7.0/css/font-awesome.min.css">         <!-- Font Awesome, http://fontawesome.io/ -->
+    <link rel="stylesheet" href="static/css/bootstrap.min.css">                               <!-- Bootstrap styles, https://getbootstrap.com/ -->
+    <link rel="stylesheet" href="static/css/tooplate-style.css">                            <!-- Templatemo style -->
+    <title> Blackhat Europe 2018 {{ name }}</title>
+    <script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
+
+    <style>
+        @import url(http://fonts.googleapis.com/css?family=Source+Code+Pro:400,600);
+        body {font-family: "Source Code Pro", Consolas, monaco, monospace; line-height: 160%; font-size: 16px;  margin: 0; }
+        path.link {
+            fill: none;
+            stroke-width: 2px;
+        }
+        .node:not(:hover) .nodetext {
+            display: none;
+        }
+        h1 { font-size: 36px; margin: 10px 0; text-transform: uppercase; font-weight: normal;}
+        h2, h3 { font-size: 18px; margin: 5px 0 ; font-weight: normal;}
+        /*header {padding: 20px; position: absolute; top: 0; left: 0;z-index: 0}*/
+        a:link { color: #EE3124; text-decoration: none;}
+        a:visited { color: #EE3124; }
+        a:hover { color: #A4CD39; text-decoration: underline;}
+        a:active { color: #EE3124; }
+    </style>
+      </head>
+
+      <body>
+        <div class="container-fluid">
+            <div class="tm-body">
+                <div class="tm-sidebar sticky">
+                    <section id="welcome" class="tm-content-box tm-banner margin-b-15">
+                        <div class="tm-banner-inner">
+                            <i class="fa fa-film fa-2x margin-b-40"></i>
+                            <h1 class="tm-banner-title">Facial recognition</h1>
+                            <p class="tm-banner-subtitle">Node</p>
+                        </div>
+                    </section>
+                    <nav class="tm-main-nav">
+                        <header>
+                            <h2>Unknow People</h2>
+                            <img id="photo" src=""/>
+                            <div id="info">Personal data ...</div>
+                        </header>
+                    </nav>
+                </div>
+
+                <div class="tm-main-content tm-gallery-container">
+                    <div class="grid">
+                        <section id="vis" style="z-index: 100"></section>
+                    </div>
+                </div> <!-- tm-main-content -->
+            </div>
+
+            <footer class="tm-footer text-right">
+                <p>Copyright &copy; <span class="tm-current-year">2018</span> Devo
+                </p>
+                <p>
+                Free template Designed by <a href="https://www.facebook.com/tooplate" target="_parent">Tooplate</a>
+                    <img title="Creative Commons License" alt="Creative Commons License"
+                         src="https://licensebuttons.net/l/by/4.0/88x31.png" width="88" height="31" border="0">
+                </p>
+            </footer>
+
+        </div> <!-- container-fluid -->
+
+        <!-- load JS files -->
+
+
+        <script>
+
+            // some colour variables
+            var tcBlack = "#130C0E";
+
+            // rest of vars
+            var w = 1000,
+                h = 800,
+                maxNodeSize = 50,
+                x_browser = 120,
+                y_browser = 25,
+                root;
+
+            var vis;
+            var force = d3.layout.force();
+
+            vis = d3.select("#vis").append("svg").attr("width", w).attr("height", h);
+
+            d3.json("http://127.0.0.1:5001/data", function(json) {
+
+                root = json;
+                root.fixed = true;
+                root.x = w / 2;
+                root.y = h / 4;
+
+
+                // Build the path
+                var defs = vis.insert("svg:defs")
+                    .data(["end"]);
+
+
+                defs.enter().append("svg:path")
+                    .attr("d", "M0,-5L10,0L0,5");
+
+                update();
+            });
+
+
+            /**
+             *
+             */
+            function update() {
+                var nodes = flatten(root),
+                    links = d3.layout.tree().links(nodes);
+
+                // Restart the force layout.
+                force.nodes(nodes)
+                    .links(links)
+                    .linkDistance(200)
+                    .gravity(0)
+                    .friction(0.5)
+                    .size([w, h])
+                    .on("tick", tick)
+                    .start();
+
+                var path = vis.selectAll("path.link")
+                    .data(links, function(d) { return d.target.id; });
+
+                path.enter().insert("svg:path")
+                    .attr("class", "link")
+                    // .attr("marker-end", "url(#end)")
+                    .style("stroke", "#eee");
+
+
+                // Exit any old paths.
+                path.exit().remove();
+
+
+
+                // Update the nodes…
+                var node = vis.selectAll("g.node")
+                    .data(nodes, function(d) { return d.id; });
+
+
+                // Enter any new nodes.
+                var nodeEnter = node.enter().append("svg:g")
+                    .attr("class", "node")
+                    .attr("transform", function(d) { return "translate(" + d.x + "," + d.y + ")"; })
+                    .on("dblclick", click)
+                    .call(force.drag);
+
+                // // Append a circle
+                // nodeEnter.append("svg:circle")
+                //     .attr("r", function(d) { return Math.sqrt(d.size) / 10 || 4.5; })
+                //     .style("fill", "#eee");
+
+
+                // Append images
+                var images = nodeEnter.append("svg:image")
+                    .attr("xlink:href",  function(d) { return d.img;})
+                    .attr("x", function(d) { return -25;})
+                    .attr("y", function(d) { return -25;})
+                    .attr("height", 50)
+                    .attr("width", 50);
+
+                // make the image grow a little on mouse over and add the text details on click
+                var setEvents = images
+                // Append text. XSS must be solved
+                    .on( 'click', function (d) {
+                        d3.select("h1").html(d.video);
+                        d3.select("h2").html(d.name);
+                        console.log(d.img);
+                        d3.select("#photo").attr('src', d.img);
+                        d3.select("#photo").attr('width', '400px');
+                        d3.select("#info").html("Take me to " +
+                            "<a href='" + d.link + "' >"  +
+                            d.name + " web page ⇢"+
+                            "</a>" );
+                    })
+
+                    .on( 'mouseenter', function() {
+                        // select element in current context
+                        d3.select( this )
+                            .transition()
+                            .attr("x", function(d) { return -60;})
+                            .attr("y", function(d) { return -60;})
+                            .attr("height", 250)
+                            .attr("width", 250);
+                    })
+                    // set back
+                    .on( 'mouseleave', function() {
+                        d3.select( this )
+                            .transition()
+                            .attr("x", function(d) { return -25;})
+                            .attr("y", function(d) { return -25;})
+                            .attr("height", 50)
+                            .attr("width", 50);
+                    });
+
+                // Append hero name on roll over next to the node as well
+                nodeEnter.append("text")
+                    .attr("class", "nodetext")
+                    .attr("x", x_browser)
+                    .attr("y", y_browser +175)
+                    .attr("fill", tcBlack)
+                    .text(function(d) { return d.name; });
+
+
+                // Exit any old nodes.
+                node.exit().remove();
+
+
+                // Re-select for update.
+                path = vis.selectAll("path.link");
+                node = vis.selectAll("g.node");
+
+                function tick() {
+
+
+                    path.attr("d", function(d) {
+
+                        var dx = d.target.x - d.source.x,
+                            dy = d.target.y - d.source.y,
+                            dr = Math.sqrt(dx * dx + dy * dy);
+                        return   "M" + d.source.x + ","
+                            + d.source.y
+                            + "A" + dr + ","
+                            + dr + " 0 0,1 "
+                            + d.target.x + ","
+                            + d.target.y;
+                    });
+                    node.attr("transform", nodeTransform);
+                }
+            }
+
+
+
+            function nodeTransform(d) {
+                d.x =  Math.max(maxNodeSize, Math.min(w - (d.imgwidth/2 || 16), d.x));
+                d.y =  Math.max(maxNodeSize, Math.min(h - (d.imgheight/2 || 16), d.y));
+                return "translate(" + d.x + "," + d.y + ")";
+            }
+
+            /**
+             * Toggle children on click.
+             */
+            function click(d) {
+
+                    function recurseHide(node) {
+                        if (node.children){
+                            node._children = node.children;
+                            node.children.forEach(recurseHide);
+                            node.children = null;
+                        } else {
+                            node.children = node._children;
+                            // node.children.forEach(recurseHide);
+                            node._children = null;
+                        }
+                    }
+                  recurseHide(d);
+                update();
+            }
+
+
+            /**
+             * Returns a list of all nodes under the root.
+             */
+            function flatten(root) {
+                var nodes = [];
+                var i = 0;
+
+                function recurse(node) {
+                    if (node.children)
+                        node.children.forEach(recurse);
+                    if (!node.id)
+                        node.id = ++i;
+                    nodes.push(node);
+                }
+
+                recurse(root);
+                return nodes;
+            }
+
+
+        </script>
+
+
+      </body>
+    </html>
